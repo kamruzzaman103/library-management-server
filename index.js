@@ -67,10 +67,10 @@ async function run() {
     });
 
     // Get all books
-    app.get("/api/books", async (req, res) => {
-      const books = await bookCollection.find().toArray();
-      res.send(books);
-    });
+    // app.get("/api/books", async (req, res) => {
+    //   const books = await bookCollection.find().toArray();
+    //   res.send(books);
+    // });
 
     // Get single book
     app.get("/api/books/:id", async (req, res) => {
@@ -177,7 +177,38 @@ async function run() {
       }
     });
 
-  
+    // category
+    app.get("/api/books", async (req, res) => {
+      const category = req.query.category;
+    
+      let query = {};
+      if (category) {
+        query = { category: { $regex: new RegExp(category, "i") } }; // Case-insensitive
+      }
+    
+      const books = await bookCollection.find(query).toArray();
+      res.send(books);
+    });
+      
+    //  Get all books
+    app.get("/api/books", async (req, res) => {
+      const books = await bookCollection.find().toArray();
+      res.send(books);
+    });
+    
+
+    // popular books
+    router.get("/api/books/popular", async (req, res) => {
+      try {
+        const books = await bookCollection.find({})
+          .sort({ rating: -1, releaseDate: -1 })
+          .limit(3);
+    
+        res.json(books);
+      } catch (error) {
+        res.status(500).json({ message: "Server Error" });
+      }
+    });
 
   } finally {
     // Server keeps running
