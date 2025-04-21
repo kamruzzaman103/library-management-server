@@ -1,6 +1,7 @@
 const express = require("express");
 const cors = require("cors");
 const { MongoClient, ObjectId } = require("mongodb");
+
 require("dotenv").config();
 
 const app = express();
@@ -80,6 +81,8 @@ async function run() {
       res.send(book);
     });
 
+  
+
     // Borrow a book
     app.post("/api/borrow", async (req, res) => {
       const { bookId, userName, userEmail, returnDate } = req.body;
@@ -101,6 +104,22 @@ async function run() {
             .send({ success: false, message: "Book not available" });
         }
 
+        // Check if the user already borrowed this book
+        const alreadyBorrowed = await borrowedCollection.findOne({
+          bookId,
+          userEmail,
+        });
+
+        if (alreadyBorrowed) {
+          return res
+            .status(400)
+            .send({
+              success: false,
+              message: "You already borrowed this book.",
+            });
+        }
+
+        // Decrease book quantity
         await bookCollection.updateOne(
           { _id: new ObjectId(bookId), quantity: { $gt: 0 } },
           { $inc: { quantity: -1 } }
@@ -130,7 +149,8 @@ async function run() {
       }
     });
 
-    // Get borrowed books by user email
+
+     // Get borrowed books by user email
     app.get("/api/borrowed", async (req, res) => {
       const email = req.query.email;
       if (!email) return res.status(400).send({ error: "Email is required." });
@@ -180,34 +200,20 @@ async function run() {
     // category
     app.get("/api/books", async (req, res) => {
       const category = req.query.category;
-    
+
       let query = {};
       if (category) {
         query = { category: { $regex: new RegExp(category, "i") } }; // Case-insensitive
       }
-    
+
       const books = await bookCollection.find(query).toArray();
       res.send(books);
     });
-      
+
     //  Get all books
     app.get("/api/books", async (req, res) => {
       const books = await bookCollection.find().toArray();
       res.send(books);
-    });
-    
-
-    // popular books
-    router.get("/api/books/popular", async (req, res) => {
-      try {
-        const books = await bookCollection.find({})
-          .sort({ rating: -1, releaseDate: -1 })
-          .limit(3);
-    
-        res.json(books);
-      } catch (error) {
-        res.status(500).json({ message: "Server Error" });
-      }
     });
 
   } finally {
