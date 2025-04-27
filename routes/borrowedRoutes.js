@@ -12,62 +12,73 @@ function setCollections(collections) {
 }
 
 // Borrow a book
-router.post("/", async (req, res) => {
-  const { bookId, userName, userEmail, returnDate } = req.body;
+    router.post("/api/borrow", async (req, res) => {
+      const { bookId, userName, userEmail, returnDate } = req.body;
 
-  try {
-    const book = await bookCollection.findOne({
-      _id: new ObjectId(bookId),
+      try {
+        const book = await bookCollection.findOne({
+          _id: new ObjectId(bookId),
+        });
+
+        if (!book) {
+          return res
+            .status(404)
+            .send({ success: false, message: "Book not found" });
+        }
+
+        if (book.quantity === 0) {
+          return res
+            .status(400)
+            .send({ success: false, message: "Book not available" });
+        }
+
+        // Check if the user already borrowed this book
+        const alreadyBorrowed = await borrowedCollection.findOne({
+          bookId,
+          userEmail,
+        });
+
+        if (alreadyBorrowed) {
+          return res
+            .status(400)
+            .send({
+              success: false,
+              message: "You already borrowed this book.",
+            });
+        }
+
+        // Decrease book quantity
+        await bookCollection.updateOne(
+          { _id: new ObjectId(bookId), quantity: { $gt: 0 } },
+          { $inc: { quantity: -1 } }
+        );
+
+        const borrowData = {
+          bookId,
+          title: book.title,
+          image: book.image,
+          category: book.category,
+          userName,
+          userEmail,
+          returnDate,
+          borrowedAt: new Date(),
+        };
+
+        const result = await borrowedCollection.insertOne(borrowData);
+
+        res.status(200).send({
+          success: true,
+          message: "Borrowed successfully",
+          id: result.insertedId,
+        });
+      } catch (err) {
+        console.error("Error borrowing book:", err);
+        res.status(500).send({ success: false, message: "Server error" });
+      }
     });
-
-    if (!book) {
-      return res.status(404).send({ success: false, message: "Book not found" });
-    }
-
-    if (book.quantity === 0) {
-      return res.status(400).send({ success: false, message: "Book not available" });
-    }
-
-    const alreadyBorrowed = await borrowedCollection.findOne({
-      bookId,
-      userEmail,
-    });
-
-    if (alreadyBorrowed) {
-      return res.status(400).send({ success: false, message: "You already borrowed this book." });
-    }
-
-    await bookCollection.updateOne(
-      { _id: new ObjectId(bookId), quantity: { $gt: 0 } },
-      { $inc: { quantity: -1 } }
-    );
-
-    const borrowData = {
-      bookId,
-      title: book.title,
-      image: book.image,
-      category: book.category,
-      userName,
-      userEmail,
-      returnDate,
-      borrowedAt: new Date(),
-    };
-
-    const result = await borrowedCollection.insertOne(borrowData);
-
-    res.status(200).send({
-      success: true,
-      message: "Borrowed successfully",
-      id: result.insertedId,
-    });
-  } catch (err) {
-    console.error("Error borrowing book:", err);
-    res.status(500).send({ success: false, message: "Server error" });
-  }
-});
 
 // Get borrowed books by user email
-router.get("/", async (req, res) => {
+router.get("/api/borrowed", async (req, res) => {
   const email = req.query.email;
   if (!email) return res.status(400).send({ error: "Email is required." });
 
@@ -85,7 +96,7 @@ router.get("/", async (req, res) => {
 });
 
 // Return a book
-router.delete("/:id", async (req, res) => {
+router.delete("/api/borrowed/:id", async (req, res) => {
   const borrowedId = req.params.id;
 
   try {
