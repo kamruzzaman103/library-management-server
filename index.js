@@ -67,11 +67,7 @@ async function run() {
       }
     });
 
-    // Get all books
-    // app.get("/api/books", async (req, res) => {
-    //   const books = await bookCollection.find().toArray();
-    //   res.send(books);
-    // });
+
 
     // Get single book
     app.get("/api/books/:id", async (req, res) => {
