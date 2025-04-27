@@ -31,7 +31,7 @@ async function run() {
     app.use("/api/books", bookRoutes.router);
     app.use("/", borrowedRoutes.router);
 
-    console.log("✅ MongoDB connected and routes initialized");
+    console.log("MongoDB connected and routes initialized");
 
   } catch (error) {
     console.error("Failed to connect MongoDB", error);
@@ -42,10 +42,10 @@ run().catch(console.error);
 
 
 app.get("/", (req, res) => {
-  res.send("📚 Library API is running!");
+  res.send("Library API is running!");
 });
 
 
 app.listen(port, () => {
-  console.log(`✅ Server running at http://localhost:${port}`);
+  console.log(`Server running at http://localhost:${port}`);
 });
